@@ -37,10 +37,26 @@ paypal_client = PayPalHttpClient(environment)
 # Products
 # ----------------------
 PRODUCTS = {
-    "XML Key Generator Tool v4.0": {"file_id": "1SRI05oRIFGW6eKbpNiNVuuaLHSvKM4l1", "price": 5.0},
-    "Bulk XML File Generator Tool v1.0": {"file_id": "1fnySG8P15lhAkJNkOM27PcbB1j5Ut5oa", "price": 3.0},
-    "HDD GUI Tool": {"file_id": "1ADyxtRVz4q4O-sAMFa-Q8w4tbvra-L10", "price": 4.0},
-    "Hikvision Video Downloader": {"file_id": "1gsFrb5Fz5DozAsR2V65aoLfCCTL6bIbN", "price": 6.0}
+    "XML Key Generator Tool v4.0": {
+        "file_id": "1SRI05oRIFGW6eKbpNiNVuuaLHSvKM4l1",  # Shared with service account
+        "price": "5.00",
+        "currency": "USD"
+    },
+    "Bulk XML File Generator Tool v1.0": {
+        "file_id": "1abcDEFghIJKlmnOPqrsTUvWxYZ123456",  # Replace with your actual file ID
+        "price": "3.00",
+        "currency": "USD"
+    },
+    "HDD GUI Tool": {
+        "file_id": "1zyXWVutSRqponMLkjIHGFEDCBA987654",  # Replace with your actual file ID
+        "price": "4.00",
+        "currency": "USD"
+    },
+    "Hikvision Video Downloader": {
+        "file_id": "1a2b3c4d5e6f7g8h9i0jklmnopqrstuv",  # Replace with your actual file ID
+        "price": "6.00",
+        "currency": "USD"
+    }
 }
 
 st.title("💻 Doitek Digital Store")
@@ -110,3 +126,4 @@ if "paypal_order_id" in st.session_state:
                 st.warning(f"Payment status: {capture_response.result.status}")
         except Exception as e:
             st.error(f"Error capturing payment: {e}")
+
