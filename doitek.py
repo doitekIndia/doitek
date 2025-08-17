@@ -35,7 +35,7 @@ products = {
     "XML Key Generator Tool v4.0": {
         "price": "5.00",
         "currency": "USD",
-        "file_id": "YOUR_GOOGLE_DRIVE_FILE_ID"  # Replace with your file ID
+        "file_id": "1SRI05oRIFGW6eKbpNiNVuuaLHSvKM4l1"  # Replace with your file ID
     }
 }
 
@@ -94,3 +94,4 @@ if "paypal_order_id" in st.session_state:
                 st.warning(f"Payment status: {capture_response.result.status}")
         except Exception as e:
             st.error(f"Error capturing payment: {e}")
+
