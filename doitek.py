@@ -1,16 +1,18 @@
 import streamlit as st
 import json
-from paypalcheckoutsdk.core import PayPalHttpClient, SandboxEnvironment
+from paypalcheckoutsdk.core import PayPalHttpClient, SandboxEnvironment, LiveEnvironment
 from paypalcheckoutsdk.orders import OrdersCreateRequest, OrdersCaptureRequest
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
-import datetime
+from googleapiclient.http import MediaIoBaseDownload
+import io
 
 # ----------------------
 # Load secrets
 # ----------------------
 paypal_client_id = st.secrets["paypal"]["client_id"]
 paypal_secret = st.secrets["paypal"]["secret"]
+paypal_mode = st.secrets["paypal"].get("mode", "sandbox")  # "sandbox" or "live"
 gdrive_json = json.loads(st.secrets["gdrive"]["service_account_json"])
 
 # ----------------------
@@ -25,37 +27,38 @@ drive_service = build("drive", "v3", credentials=credentials)
 # ----------------------
 # PayPal setup
 # ----------------------
-environment = SandboxEnvironment(client_id=paypal_client_id, client_secret=paypal_secret)
+if paypal_mode.lower() == "live":
+    environment = LiveEnvironment(client_id=paypal_client_id, client_secret=paypal_secret)
+else:
+    environment = SandboxEnvironment(client_id=paypal_client_id, client_secret=paypal_secret)
 paypal_client = PayPalHttpClient(environment)
 
 # ----------------------
 # Products
 # ----------------------
-products = {
-    "XML Key Generator Tool v4.0": {
-        "price": "5.00",
-        "currency": "USD",
-        "file_id": "1SRI05oRIFGW6eKbpNiNVuuaLHSvKM4l1"  # Replace with your file ID
-    }
+PRODUCTS = {
+    "XML Key Generator Tool v4.0": {"file_id": "1SRI05oRIFGW6eKbpNiNVuuaLHSvKM4l1", "price": 5.0},
+    "Bulk XML File Generator Tool v1.0": {"file_id": "1fnySG8P15lhAkJNkOM27PcbB1j5Ut5oa", "price": 3.0},
+    "HDD GUI Tool": {"file_id": "1ADyxtRVz4q4O-sAMFa-Q8w4tbvra-L10", "price": 4.0},
+    "Hikvision Video Downloader": {"file_id": "1gsFrb5Fz5DozAsR2V65aoLfCCTL6bIbN", "price": 6.0}
 }
 
 st.title("💻 Doitek Digital Store")
 
 # Product selection
-selected_product = st.selectbox("Choose a product:", list(products.keys()))
-product = products[selected_product]
+selected_product = st.selectbox("Choose a product:", list(PRODUCTS.keys()))
+product = PRODUCTS[selected_product]
 
 # ----------------------
 # PayPal Order Creation
 # ----------------------
-if st.button(f"Pay ${product['price']} via PayPal Sandbox"):
-    # 1️⃣ Create Order
+if st.button(f"Pay ${product['price']} via PayPal"):
     request = OrdersCreateRequest()
     request.prefer("return=representation")
     request.request_body({
         "intent": "CAPTURE",
         "purchase_units": [{
-            "amount": {"currency_code": product["currency"], "value": product["price"]}
+            "amount": {"currency_code": "USD", "value": str(product["price"])}
         }]
     })
     try:
@@ -63,7 +66,7 @@ if st.button(f"Pay ${product['price']} via PayPal Sandbox"):
         order_id = response.result.id
         st.success(f"✅ PayPal order created! Order ID: {order_id}")
 
-        # 2️⃣ Show approval link
+        # Show approval link
         for link in response.result.links:
             if link.rel == "approve":
                 st.markdown(f"[Click here to approve payment]({link.href})")
@@ -72,26 +75,38 @@ if st.button(f"Pay ${product['price']} via PayPal Sandbox"):
         st.error(f"Error creating order: {e}")
 
 # ----------------------
-# Capture payment after approval
+# Capture Payment & Download
 # ----------------------
 if "paypal_order_id" in st.session_state:
-    if st.button("Capture Payment"):
+    if st.button("Capture Payment and Get Download"):
         capture_request = OrdersCaptureRequest(st.session_state["paypal_order_id"])
         capture_request.request_body({})
         try:
             capture_response = paypal_client.execute(capture_request)
             if capture_response.result.status == "COMPLETED":
-                st.success("🎉 Payment completed! Generating secure download link...")
+                st.success("🎉 Payment completed! Preparing secure download...")
 
-                # ----------------------
-                # Generate Google Drive file link
-                # ----------------------
+                # Google Drive download
                 file_id = product["file_id"]
-                expires_at = datetime.datetime.utcnow() + datetime.timedelta(minutes=10)
-                download_link = f"https://drive.google.com/uc?id={file_id}&export=download"
-                st.markdown(f"[⬇ Download {selected_product}]({download_link})")
+                request = drive_service.files().get_media(fileId=file_id)
+                fh = io.BytesIO()
+                downloader = MediaIoBaseDownload(fh, request)
+
+                done = False
+                while not done:
+                    status, done = downloader.next_chunk()
+
+                fh.seek(0)
+                st.download_button(
+                    label=f"⬇ Download {selected_product}",
+                    data=fh,
+                    file_name=f"{selected_product}.zip",  # adjust extension
+                    mime="application/octet-stream"
+                )
+
+                # Clear order to prevent reuse
+                del st.session_state["paypal_order_id"]
             else:
                 st.warning(f"Payment status: {capture_response.result.status}")
         except Exception as e:
             st.error(f"Error capturing payment: {e}")
-
