@@ -6,7 +6,7 @@ from paypalcheckoutsdk.orders import OrdersCreateRequest, OrdersCaptureRequest
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
-
+st.markdown("### Created by Nitin Khatri YT [@doitek](https://www.youtube.com/@doitek)")
 # ----------------------
 # Load secrets
 # ----------------------
@@ -144,3 +144,4 @@ if "paypal_order" in st.session_state:
                     st.warning(f"Payment status: {capture_response.result.status}")
             except Exception as e:
                 st.error(f"Error capturing payment: {e}")
+
